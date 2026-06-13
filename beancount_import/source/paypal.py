@@ -503,7 +503,7 @@ class PaypalSource(LinkBasedSource, Source):
             counterparty_metadata = []
             negate_funding_source_amounts = True
 
-        elif transaction_type_enum.endswith('_SENT') or transaction_type_enum.endswith('_PURCHASE'):
+        elif transaction_type_enum.endswith('_SENT') or '_PURCHASE' in transaction_type_enum:
             negate_funding_source_amounts = True
 
         elif transaction_type_enum.endswith('_RECEIVED'):
@@ -518,6 +518,8 @@ class PaypalSource(LinkBasedSource, Source):
         elif transaction_type_enum == 'EBAY_SALE':
             negate_funding_source_amounts = False
         elif transaction_type_enum == 'INVOICE_PAID':
+            pass
+        elif transaction_type_enum == 'CRYPTO_SOLD':
             pass
         else:
             raise RuntimeError('Unknown transaction type: %s' % transaction_type_enum)

@@ -178,10 +178,10 @@ setuptools.setup(
         'typing_extensions',
         'cachetools',
     ],
-    test_requirements=[
-        'pytest',
-        'coverage',
-    ],
+    # test_requirements=[
+    #     'pytest',
+    #     'coverage',
+    # ],
     cmdclass={
         'sdist': SdistCommand,
         'build': BuildCommand,

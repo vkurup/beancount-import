@@ -288,9 +288,17 @@ class VenmoSource(Source):
             if t == 'Standard Transfer':
                 has_transfer = True
                 has_payment = False
-            elif t in ['Charge', 'Payment', 'Merchant Transaction']:
+            elif t in ['Charge', 'Payment', 'Merchant Transaction', 'Bitcoin Purchase']:
+                if raw_txn[CSV_STATUS_KEY] != 'Complete':
+                    continue
                 has_transfer = raw_txn[CSV_FUNDING_SOURCE_KEY] != 'Venmo balance' and raw_txn[CSV_DESTINATION_KEY] != 'Venmo balance'
                 has_payment = True
+            elif t == '':
+                continue
+            elif t == 'Card Payment':
+                continue
+            elif t == 'Bitcoin Sale':
+                continue
             else:
                 raise RuntimeError('Unknown transaction type: %r' % (t,))
             for has, matched_postings, make in ((has_transfer, matched_transfer_postings, self.make_transfer_transaction),
@@ -349,7 +357,7 @@ class VenmoSource(Source):
     def _make_transaction(self, raw_txn: RawTransaction, link: bool, is_transfer: bool):
         amount = original_amount = amount_parsing.parse_amount(raw_txn[CSV_AMOUNT_TOTAL_KEY])
         txn_type = raw_txn[CSV_TYPE_KEY]
-        is_payment_txn = txn_type in ['Payment', 'Charge', 'Merchant Transaction']
+        is_payment_txn = txn_type in ['Payment', 'Charge', 'Merchant Transaction', 'Bitcoin Purchase']
         if is_transfer and is_payment_txn:
             amount = -amount
         txn_time = parse_csv_date(raw_txn[CSV_DATETIME_KEY])
