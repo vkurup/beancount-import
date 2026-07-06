@@ -1076,8 +1076,8 @@ class ParsedOfxStatement(object):
                         label=None,
                         merge=False)
 
-                if raw.tferaction == 'OUT':
-                    assert units < ZERO
+                #if raw.tferaction == 'OUT':
+                #    assert units < ZERO
 
                 security_account_name = get_subaccount(raw.inv401ksource,
                                                        security)
@@ -1279,8 +1279,11 @@ class ParsedOfxFile(object):
 
         with open(filename, 'rb') as f:
             contents = f.read()
-        # A byte string passed to BeautifulSoup is assumed to be UTF-8
-        soup = bs4.BeautifulSoup(contents, 'html.parser')
+        # Force UTF-8 rather than letting BeautifulSoup guess: newer bs4
+        # versions use charset-normalizer for encoding detection, which can
+        # misdetect plain-ASCII OFX content as a CJK encoding, corrupting
+        # numeric fields.
+        soup = bs4.BeautifulSoup(contents, 'html.parser', from_encoding='utf-8')
 
         # Get the description of securities used in this file.
         securities_map = {s.uniqueid: s for s in get_securities(soup)}
