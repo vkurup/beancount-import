@@ -56,7 +56,7 @@ specify these keys in the configuration, the generic automatic account
 prediction will likely handle them.
 
 The `locale` sets country/language specific settings.
-Currently, `en_US` and `de_DE` are available.
+Currently, `en_US` and `de_DE` are available. 
 
 Specifying credit cards
 =======================
@@ -244,7 +244,7 @@ interface, to try to debug it.
 Caching Parsing Results
 =======================
 
-Parsing the HTML files can be slow, so this module uses the Python pickle
+Parsing the HTML files can be slow, so this module uses the Python pickle 
 module/file format to cache the results of parsing the individual HTML files.
 These cached results are loaded as long as their mtime is more recent than
 the HTML file to load. If you want to enable this funcionality, pass a path
@@ -254,7 +254,7 @@ Skipping Older Invoices
 =======================
 
 In the event you want to only process invoices that happened after a certain
-date you can pass the earliest date you want to process as a configuration
+date you can pass the earliest date you want to process as a configuration 
 parameter `earliest_date` when initializing the this class.
 
 This requires parsing the HTML file in order to determine the date of the
@@ -489,7 +489,7 @@ class AmazonPickler():
         self.pickle_dir = pickle_dir
         if pickle_dir is not None and not os.access(pickle_dir, os.W_OK):
             raise Exception("Amazon pickled invoice path is not writable: %s" % pickle_dir)
-
+        
     @staticmethod
     def try_get_mtime( path: str ):
         try:
@@ -529,7 +529,7 @@ class AmazonPickler():
 
             if invoice is None:
                 # remove existing pickles if invoice couldn't be parsed
-                pickle_mtime = AmazonPickler.try_get_mtime( pickle_path )
+                pickle_mtime = AmazonPickler.try_get_mtime( pickle_path ) 
                 if pickle_mtime: os.remove( pickle_path )
                 return
 
