@@ -1530,7 +1530,6 @@ def _load_transactions(filename: str) -> List[RawEntry]:
         "Price",
         "Fees & Comm",
         "Amount",
-        "",
     ]
     expected_banking_field_names = [
         "Date",
@@ -1544,10 +1543,8 @@ def _load_transactions(filename: str) -> List[RawEntry]:
     filename = os.path.abspath(filename)
     entries = []
     with open(filename, "r", encoding="utf-8", newline="") as csvfile:
-        title = csvfile.readline()
-        match = TITLE_RE.match(title)
-        assert match, title
-        account = match.groupdict()["account"]
+        first_part_account = "..." + os.path.basename(filename).split('_')[-3][-3:]
+        account = first_part_account
         reader = csv.DictReader(csvfile)
         if reader.fieldnames == expected_brokerage_field_names:
             entries = _load_brokerage_transactions(reader, account, filename)
@@ -1687,7 +1684,7 @@ def _load_positions(filename: str) -> Sequence[RawPosition]:
         match = POSITIONS_TITLE_RE.match(title)
         assert match, title
         groups = match.groupdict()
-        date = _convert_date(match.groupdict()["date"])
+        date = _convert_date_yyyymmdd(match.groupdict()["date"])
         if groups["account"] == "All-Accounts":
             expect_account_headers = True
             looking_for_account = True
@@ -1695,7 +1692,7 @@ def _load_positions(filename: str) -> Sequence[RawPosition]:
         else:
             expect_account_headers = False
             looking_for_account = False
-            account = groups["account"]
+            account = "..." + groups["account"][-3:]
             line_count += 1
 
         for line in csvfile:
@@ -1719,7 +1716,7 @@ def _load_positions(filename: str) -> Sequence[RawPosition]:
                 line_count += len(lines) + empty_lines + 1
                 lines = []
                 empty_lines = 0
-                account = match.groupdict()["account"]
+                account = "..." + match.groupdict()["account"][-3:]
                 looking_for_account = False
                 continue
             lines.append(line)
@@ -1741,30 +1738,23 @@ def _load_positions_csv(
     expected_field_names = [
         "Symbol",
         "Description",
-        "Quantity",
+
+        "Qty (Quantity)",
         "Price",
-        "Price Change $",
-        "Price Change %",
-        "Market Value",
-        "Day Change $",
-        "Day Change %",
+        "Price Chng $ (Price Change $)",
+        "Price Chng % (Price Change %)",
+        "Mkt Val (Market Value)",
+        "Day Chng $ (Day Change $)",
+        "Day Chng % (Day Change %)",
         "Cost Basis",
-        "Gain/Loss $",
-        "Gain/Loss %",
-        "Reinvest Dividends?",
-        "Capital Gains?",
-        "% Of Account",
-        "Dividend Yield",
-        "Last Dividend",
-        "Ex-Dividend Date",
-        "P/E Ratio",
-        "52 Week Low",
-        "52 Week High",
-        "Volume",
-        "Intrinsic Value",
-        "In The Money",
-        "Security Type",
-        "",
+        "Gain $ (Gain/Loss $)",
+        "Gain % (Gain/Loss %)",
+        "Ratings",
+        "Reinvest?",
+        "Reinvest Capital Gains?",
+        "% of Acct (% of Account)",
+        "Asset Type",
+        ""
     ]
     csvfile = StringIO("\n".join(lines))
     reader = csv.DictReader(csvfile)
@@ -1774,18 +1764,18 @@ def _load_positions_csv(
     for lno, row in enumerate(reader):
         line = start_line + lno + 2
         symbol = row["Symbol"]
-        if symbol == "Account Total":
+        if symbol in ("Account Total", "Positions Total"):
             found_account_total = True
             continue
         assert not found_account_total, row
         if symbol == "Cash & Cash Investments":
             symbol = "Cash"
         symbol = STRIP_FROM_SYMBOL_RE.sub("", symbol)
-        quantity = _convert_decimal(row["Quantity"])
+        quantity = _convert_decimal(row["Qty (Quantity)"])
         price_d = _convert_decimal(row["Price"])
         price = None if price_d is None else Amount(price_d, currency=CASH_CURRENCY)
-        value_d = _convert_decimal(row["Market Value"])
-        assert value_d is not None, row["Market Value"]
+        value_d = _convert_decimal(row["Mkt Val (Market Value)"])
+        assert value_d is not None, row["Mkt Val (Market Value)"]
         value = Amount(value_d, currency=CASH_CURRENCY)
         if OPTION_RE.match(row["Symbol"]) and quantity:
             # this is an option, sold in lots of 100
@@ -1806,7 +1796,7 @@ def _load_positions_csv(
 
 
 LOT_DETAILS_TITLE_RE = re.compile(
-    r'"(?P<symbol>[A-Z]+) Lot Details for (?P<account>.+) as of (?P<datetime>.+)"'
+    r'"(?P<symbol>[A-Z/]+) Lot Details for (?P<account>.+) as of (?P<datetime>[^"]+)"'
 )
 
 
@@ -1818,10 +1808,9 @@ def _load_lots_csv(filename: str) -> Sequence[RawLot]:
         "Cost/Share",
         "Market Value",
         "Cost Basis",
-        "Gain/Loss $",
-        "Gain/Loss %",
+        "Gain/Loss ($)",
+        "Gain/Loss (%)",
         "Holding Period",
-        "",
     ]
     expected_extended_field_names = [
         "Open Date",
@@ -1850,10 +1839,10 @@ def _load_lots_csv(filename: str) -> Sequence[RawLot]:
         assert match, title
         groups = match.groupdict()
         symbol = groups["symbol"]
-        account = groups["account"]
+        account = groups["account"].strip()
         asof = _convert_title_datetime(match.groupdict()["datetime"]).date()
         empty = csvfile.readline()
-        assert not empty.strip(), empty
+        #assert not empty.strip(), empty
         reader = csv.DictReader(csvfile)
         assert (
             reader.fieldnames == expected_field_names or
@@ -1896,6 +1885,7 @@ def _convert_decimal(raw: str) -> Optional[Decimal]:
 
 
 DATE_FORMAT = "%m/%d/%Y"
+DATE_FORMAT1 = "%Y/%m/%d"
 TITLE_DATETIME_FORMAT = f"%I:%M %p ET, {DATE_FORMAT}"
 DATETIME_FORMAT = f"{DATE_FORMAT} %H:%M:%S"
 
@@ -1904,10 +1894,14 @@ def _convert_date(raw: str) -> datetime.date:
     raw = raw.split(" as of ")[-1]
     return datetime.datetime.strptime(raw, DATE_FORMAT).date()
 
+def _convert_date_yyyymmdd(raw: str) -> datetime.date:
+    raw = raw.split(" as of ")[-1]
+    return datetime.datetime.strptime(raw, DATE_FORMAT1).date()
+
 
 def _convert_title_datetime(raw: str) -> datetime.datetime:
     return datetime.datetime.strptime(raw, TITLE_DATETIME_FORMAT)
 
 
 def _convert_datetime(raw: str) -> datetime.datetime:
-    return datetime.datetime.strptime(raw, DATETIME_FORMAT)
+    return datetime.datetime.strptime(raw, DATE_FORMAT)
