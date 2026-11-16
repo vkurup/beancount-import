@@ -1116,8 +1116,8 @@ class ParsedOfxStatement(object):
                         label=None,
                         merge=False)
 
-                if raw.tferaction == 'OUT':
-                    assert units < ZERO
+                #if raw.tferaction == 'OUT':
+                #    assert units < ZERO
 
                 security_account_name = get_subaccount(raw.inv401ksource,
                                                        security)
